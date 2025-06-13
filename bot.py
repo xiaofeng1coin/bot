@@ -2,6 +2,7 @@ import asyncio
 from telethon import TelegramClient, events
 import os
 import logging
+from telegram.bot import Bot
 
 # 配置日志
 logging.basicConfig(
@@ -17,13 +18,16 @@ logger = logging.getLogger(__name__)
 API_ID = os.environ.get('API_ID')
 API_HASH = os.environ.get('API_HASH')
 SOURCE_CHAT_IDS = list(map(int, os.environ.get('SOURCE_CHAT_IDS', '').split(',')))  # 默认为空列表
-TARGET_CHAT_ID = int(os.environ.get('TARGET_CHAT_ID'))
-SESSION_FILE = os.environ.get('SESSION_FILE', '/app/sessions/session_name')
+TARGET_CHAT_ID = os.environ.get('TARGET_CHAT_ID')
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 # 创建 Telegram 客户端
-client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+user_client = TelegramClient('session_name', API_ID, API_HASH)
 
-@client.on(events.NewMessage(chats=SOURCE_CHAT_IDS))
+# 创建机器人客户端
+bot = Bot(BOT_TOKEN)
+
+@user_client.on(events.NewMessage(chats=SOURCE_CHAT_IDS))
 async def handler(event):
     # 获取消息文本
     message_text = event.message.text
@@ -32,17 +36,17 @@ async def handler(event):
         return
 
     try:
-        # 复制消息到目标群组
-        await client.send_message(TARGET_CHAT_ID, message_text)
-        logger.info(f"消息已复制并发送到目标群组: {message_text}")
+        # 使用机器人发送消息到目标群组
+        await bot.send_message(TARGET_CHAT_ID, message_text)
+        logger.info(f"消息已通过机器人发送到目标群组: {message_text}")
     except Exception as e:
         logger.error(f"发送消息出错: {e}")
 
 async def main():
-    await client.start()
+    await user_client.start()
     logger.info("监控已启动")
-    await client.run_until_disconnected()
+    await user_client.run_until_disconnected()
 
 if __name__ == "__main__":
-    with client:
-        client.loop.run_until_complete(main())
+    with user_client:
+        user_client.loop.run_until_complete(main())
