@@ -18,10 +18,10 @@ API_ID = os.environ.get('API_ID')
 API_HASH = os.environ.get('API_HASH')
 SOURCE_CHAT_IDS = list(map(int, os.environ.get('SOURCE_CHAT_IDS', '').split(',')))  # 默认为空列表
 TARGET_CHAT_ID = int(os.environ.get('TARGET_CHAT_ID'))
+SESSION_FILE = os.environ.get('SESSION_FILE', '/app/sessions/session_name')
 
 # 创建 Telegram 客户端
-client = TelegramClient('session_name', API_ID, API_HASH)
-
+client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
 @client.on(events.NewMessage(chats=SOURCE_CHAT_IDS))
 async def handler(event):
@@ -38,12 +38,11 @@ async def handler(event):
     except Exception as e:
         logger.error(f"发送消息出错: {e}")
 
-
 async def main():
     await client.start()
     logger.info("监控已启动")
     await client.run_until_disconnected()
 
-# 运行主函数
-with client:
-    client.loop.run_until_complete(main())
+if __name__ == "__main__":
+    with client:
+        client.loop.run_until_complete(main())
