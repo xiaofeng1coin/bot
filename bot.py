@@ -2,7 +2,7 @@ import asyncio
 from telethon import TelegramClient, events
 import os
 import logging
-from telegram.bot import Bot
+from telegram import Bot  # 正确的导入方式
 
 # 配置日志
 logging.basicConfig(
