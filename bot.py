@@ -1,12 +1,16 @@
 import logging
-import re
-import time
 import os
-from telegram import Bot, Update
+from telegram import Update
 from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
 
 # 配置日志
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler()  # 确保日志输出到标准输出
+    ]
+)
 logger = logging.getLogger(__name__)
 
 # 从环境变量读取配置
@@ -19,14 +23,6 @@ ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 # 消息频率控制
 message_counts = {}
 
-def check_keywords(text):
-    # 这里可以自定义关键词匹配逻辑
-    keywords = ['关键词1', '关键词2', '关键词3']
-    for keyword in keywords:
-        if re.search(keyword, text, re.IGNORECASE):
-            return True
-    return False
-
 def forward_message(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     message_id = update.effective_message.message_id
@@ -34,16 +30,14 @@ def forward_message(update: Update, context: CallbackContext):
 
     # 检查是否来自要监控的聊天
     if str(chat_id) not in FORWARDED_CHATS:
+        logger.info(f"收到消息来自未监控的群组: {chat_id}")
         return
 
     try:
         # 获取消息文本
         text = update.effective_message.text
         if not text:
-            return
-
-        # 检查是否符合关键词
-        if not check_keywords(text):
+            logger.info(f"收到非文本消息，跳过转发")
             return
 
         # 消息频率控制
@@ -52,6 +46,7 @@ def forward_message(update: Update, context: CallbackContext):
         if key in message_counts:
             message_counts[key] += 1
             if message_counts[key] > MESSAGE_LIMIT:
+                logger.warning(f"用户 {user_id} 在 1 分钟内发送了超过 {MESSAGE_LIMIT} 条消息")
                 if ADMIN_CHAT_ID:
                     context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=f"用户 {user_id} 在 1 分钟内发送了超过 {MESSAGE_LIMIT} 条消息。")
                 return
@@ -60,6 +55,7 @@ def forward_message(update: Update, context: CallbackContext):
 
         # 转发消息
         context.bot.forward_message(chat_id=TARGET_CHAT_ID, from_chat_id=chat_id, message_id=message_id)
+        logger.info(f"成功转发消息: 来自群组 {chat_id}，消息 ID {message_id}")
 
     except Exception as e:
         logger.error(f"转发消息出错: {e}")
@@ -87,6 +83,7 @@ def main():
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, forward_message))
     dp.add_error_handler(error_handler)
     updater.start_polling()
+    logger.info("机器人已启动，开始监听消息")
     updater.idle()
 
 if __name__ == '__main__':
