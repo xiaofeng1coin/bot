@@ -2,7 +2,7 @@ import asyncio
 from telethon import TelegramClient, events
 import os
 import logging
-from telegram import Bot  # 正确的导入方式
+from telegram import Bot
 
 # 配置日志
 logging.basicConfig(
@@ -21,8 +21,11 @@ SOURCE_CHAT_IDS = list(map(int, os.environ.get('SOURCE_CHAT_IDS', '').split(',')
 TARGET_CHAT_ID = os.environ.get('TARGET_CHAT_ID')
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
+# 设置会话文件路径
+SESSION_FILE = os.environ.get('SESSION_FILE', '/app/sessions/session_name')
+
 # 创建 Telegram 客户端
-user_client = TelegramClient('session_name', API_ID, API_HASH)
+user_client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 
 # 创建机器人客户端
 bot = Bot(BOT_TOKEN)
